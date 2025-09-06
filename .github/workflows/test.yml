@@ -1,4 +1,4 @@
-name: Python package
+name: CI
 
 on:
   push:
@@ -13,35 +13,32 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', 'pypy-3.8']
+        python-version: ['3.8', '3.9', 'pypy-3.8']
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install dependencies
-      run: pip install coverage nose
-    - name: Run tests
-      run: coverage run --source=olefile -m nose tests
-    - name: Upload coverage to Coveralls
-      if: success()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        pip install coveralls
-        coveralls
-    - name: Run after script
-      run: |
-        coverage report
-        pip install pycodestyle pyflakes
-        pyflakes .
-        pycodestyle --statistics --count .
-      continue-on-error: true
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox-gh-actions codecov
+
+      - name: Run tests
+        run: tox
+
+      - name: Upload coverage to Codecov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          VERSION="python_${{ matrix.python-version }}" &&
+          VERSION="${VERSION//[^[:alnum:]]/}" &&
+          codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION ||
+          (sleep 5 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
+          (sleep 10 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
+          (sleep 20 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
+          (sleep 30 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION)
