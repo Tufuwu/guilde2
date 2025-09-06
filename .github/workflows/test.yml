@@ -1,4 +1,4 @@
-name: Python CI
+name: CI
 
 on:
   push:
@@ -13,13 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.8"
-          - "3.9"
-          - "3.10"
-          - "pypy-3.8"
+        python-version: ['3.8']
+        version: ['19.3.8', '18.14.9']
+    env:
+      TOX_ENV: flake8
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -27,19 +26,37 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install --upgrade pip setuptools
+          pip install flake8 flake8-print coveralls
 
-      - name: Make setconf.py executable
-        run: chmod +x setconf.py
+      - name: Run flake8
+        run: flake8
 
-      - name: Run setconf.py
-        run: ./setconf.py --test
-
-      - name: Make test.sh executable
-        run: chmod +x testcases/test.sh
+      - name: Set up Docker
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+          docker run -d -p 127.0.0.1:9000:9000 -p 127.0.0.1:8123:8123 --name test-clickhouse-server --ulimit nofile=262144:262144 yandex/clickhouse-server:${{ matrix.version }}
+          docker ps -a
+          sed -i 's/^host=localhost$/host=clickhouse-server/' setup.cfg
+          echo '127.0.0.1 clickhouse-server' | sudo tee /etc/hosts > /dev/null
 
       - name: Run tests
-        run: cd testcases && ./test.sh
+        run: coverage run --source=clickhouse_sqlalchemy setup.py test
+
+      - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: coveralls
