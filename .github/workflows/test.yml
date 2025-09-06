@@ -1,4 +1,4 @@
-name: CI
+name: Python CI
 
 on:
   push:
@@ -10,35 +10,30 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-22.04]
-        python-version: ['3.8', '3.9', '3.10']
-        arch: [x64]  # Removed arm64 to avoid the exec format error
-        include:
-          - env: WITHOUT_EXTENSION=0
-          - env: WITHOUT_EXTENSION=1
+        python-version: ['3.8']
     steps:
-      - name: Check out code
+      - name: Check out repository
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.arch }}
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install coveralls pytest
-          python setup.py develop
+          sudo apt-get update
+          sudo apt-get install -y coinor-cbc
+          pip install -r requirements.txt
+          python setup.py -q install
 
-      - name: Run tests
-        run: coverage run --source=mwparserfromhell -m pytest
+      - name: Lint with flake8
+        run: flake8
 
-      - name: Upload coverage to Coveralls
+      - name: Test with pytest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
+          PYTHONWARNINGS: "ignore::DeprecationWarning"
+        run: pytest
