@@ -1,36 +1,45 @@
-PyFinTS
-=======
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1341346.svg)](https://doi.org/10.5281/zenodo.1341346)
+[![Build Status](https://travis-ci.com/raysect/source.svg?branch=master)](https://travis-ci.com/raysect/source)
 
-This is a pure-python implementation of FinTS (formerly known as HBCI), a
-online-banking protocol commonly supported by German banks.
+<a name="logo"/>
+<a href="https://www.raysect.org/" target="_blank">
+<img src="https://raysect.github.io/documentation/_images/RaysectLogo_small.png" alt="Raysect Logo"></img>
+</a>
+
+Raysect Python Raytracing Package
+=================================
+
+A ray-tracing framework for optical/non-optical physics simulations.
+
+The aims of the Raysect project are as follows:
+
+* develop a ray-tracer that is easy for scientists and engineers to use and extend
+
+* the raytracer must be robust and high precision
+
+The general development philosophy is ease of use trumps performance, but performance is not to be ignored.
+
+For more information, see the [documentation pages](http://www.raysect.org/).
 
 
-[Read our documentation for more info](https://python-fints.readthedocs.io)
+![Dispersion of light passing through a prism](docs/source/demonstrations/optics/prism_720x405.png)
 
-Maintenance Status 
-------------------
+*Caption: a simulation of Newton's classic experiment, white light being dispersed by a glass prism.*
 
-This project is maintained, but with limited capacity. Working on this is takes a lot of time and testing since all banks do things differently and once you move a part here, you break an unexpected one over there. Therefore: Bugs will only be fixed by me if they occur with a bank where I have an account. New features will only be developed if I need them. PRs will be merged if they either have a very low risk of breaking things elsewhere (e.g. purely adding new commands) or if I can test them. In any case, things might take a little time until I have the bandwidth to focus on them. Sorry about that :( 
 
-Limitations
------------
+Please note, this code is currently under heavy development and subject to change.
 
-* Only FinTS 3.0 is supported
-* Only PIN/TAN authentication is supported, no signature cards
-* Only the following operations are supported:
-  * Fetching bank statements
-  * Fetching balances
-  * Fetching holdings
-  * SEPA transfers and debits (only with required TAN and with specific TAN methods)
-* Supports Python 3.6+
+Raysect currently only supports Linux. Windows support will come at a later stage.
 
-Credits and License
--------------------
+Please note, for legal reasons we require the copyright to any contributed code to be passed to the Raysect project. Please see CONTRIBUTING.txt in the repository.
 
-This library is maintained by Raphael Michel <mail@raphaelmichel.de>
-and features major contributions by Henryk Plötz.
+Development Team
+----------------
 
-Further thanks for improving this library go out to:
-Daniel Nowak, Patrick Braune, Mathias Dalheimer, Christopher Grebs, Markus Schindler, and many more.
+* Dr Alex Meakins
+* Dr Matthew Carr
 
-License: LGPL
+Citing the Code
+---------------
+
+* Dr Alex Meakins, & Matthew Carr. (2018, August 7). raysect/source: v0.5.2 Release (Version v0.5.2). Zenodo. http://doi.org/10.5281/zenodo.1341376
