@@ -9,53 +9,38 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10"]
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
 
-      - name: Install dependencies
-        run: |
-          pip install -r mock/requirements.txt
-          pip install pytest-cov
+    - name: Install Miniconda
+      run: |
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/miniconda.sh
+        bash $HOME/miniconda.sh -b -u -p $HOME/miniconda
+        echo "$HOME/miniconda/bin" >> $GITHUB_PATH
 
-      - name: Make run-tests.sh executable
-        run: chmod +x ./mock/run-tests.sh
+    - name: Install dependencies
+      run: |
+        pip install nose2 coverage coveralls flake8 scikit-image
+        pip install -e .
 
-      - name: Run tests
-        run: |
-          PYTHON=python${{ matrix.python-version }} ./mock/run-tests.sh
+    - name: Run flake8
+      run: flake8
 
-  copr-build:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Run tests
+      env:
+        PYTHONWARNINGS: "ignore:DEPRECATION::pip._internal.cli.base_command"
+      run: nose2 --with-coverage --coverage=tftb
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.9"
-
-      - name: Install dependencies
-        run: |
-          pip install -r mock/requirements.txt
-          pip install pytest-cov
-
-      - name: Mock RPM in Copr
-        run: |
-          PACKAGE=mock .travis/copr-build
-
-      - name: Mock-core-configs RPM in Copr
-        run: |
-          PACKAGE=mock-core-configs .travis/copr-build
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
