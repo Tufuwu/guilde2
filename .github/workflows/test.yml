@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8']
+        python-version: [3.8, 3.9, pypy-3.8]
+        django-version: [2.2, 3.0, 3.2]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -23,16 +24,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install Poetry
+        run: pip install poetry
+
       - name: Install dependencies
         run: |
-          sudo apt-get -y update
-          pip install pytest-cov
-          pip install .[ja]
-
-      - name: Make test.sh executable
-        run: chmod +x test.sh
+          poetry install -q
+          poetry run pip install -q "Django>={{ matrix.django-version }},<$(echo ${{ matrix.django-version }} | awk -F. '{print $1+1}')"
 
       - name: Run tests
-        run: |
-          python3 -m pytest
-          ./test.sh
+        run: poetry run python -m pytest
