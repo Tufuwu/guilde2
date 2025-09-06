@@ -1,58 +1,6 @@
-Incremental
------------
-
-This project includes code from the Twisted Project, which is licensed as below.
-
-Copyright (c) 2001-2015
-Allen Short
-Amber Hawkie Brown
-Andrew Bennetts
-Andy Gayton
-Antoine Pitrou
-Apple Computer, Inc.
-Ashwini Oruganti
-Benjamin Bruheim
-Bob Ippolito
-Canonical Limited
-Christopher Armstrong
-David Reid
-Divmod Inc.
-Donovan Preston
-Eric Mangold
-Eyal Lotem
-Google Inc.
-Hybrid Logic Ltd.
-Hynek Schlawack
-Itamar Turner-Trauring
-James Knight
-Jason A. Mobarak
-Jean-Paul Calderone
-Jessica McKellar
-Jonathan D. Simms
-Jonathan Jacobs
-Jonathan Lange
-Julian Berman
-Jürgen Hermann
-Kevin Horn
-Kevin Turner
-Laurens Van Houtven
-Mary Gardiner
-Massachusetts Institute of Technology
-Matthew Lefkowitz
-Moshe Zadka
-Paul Swartz
-Pavel Pergamenshchik
-Rackspace, US Inc.
-Ralph Meijer
-Richard Wall
-Sean Riley
-Software Freedom Conservancy
-Tavendo GmbH
-Thijs Triemstra
-Thomas Herve
-Timothy Allen
-Tom Prince
-Travis B. Hartwell
+Copyright (c) 2014-2016 Ryan Huber <rhuber@gmail.com>
+Copyright (c) 2015-2018 Tollef Fog Heen <tfheen@err.no>
+Copyright (c) 2015-2020 Trygve Aaberge <trygveaa@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
