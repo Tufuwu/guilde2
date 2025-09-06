@@ -9,13 +9,41 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.8']
+        django-version: ['Django>=3.0,<3.1', 'Django>=2.2,<2.3']
+        run-web-tests: [true, false]
+        use-custom-model: [true, false]
+        exclude:
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: false
+            use-custom-model: true
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: false
+            use-custom-model: false
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: true
+            use-custom-model: true
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: true
+            use-custom-model: false
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: true
+            use-custom-model: true
+          - python-version: '3.8'
+            django-version: 'Django>=3.0,<3.1'
+            run-web-tests: true
+            use-custom-model: false
     steps:
-      - name: Check out the repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -26,18 +54,47 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pipenv
-          pipenv install --dev
+          pip install codecov
+          grep -v "^django==" requirements.txt > /tmp/reqs.txt
+          pip install -r /tmp/reqs.txt
+          pip install "${{ matrix.django-version }}" -U
 
-      - name: Install flake8
-        run: pipenv run pip install flake8
+      - name: Make test script executable
+        run: chmod +x ./scripts/ci_runtests.sh
 
-      - name: Lint with flake8
+      - name: Run tests
+        env:
+          DJANGO_VERSION: ${{ matrix.django-version }}
+          RUN_WEB_TESTS: ${{ matrix.run-web-tests }}
+          USE_CUSTOM_MODEL: ${{ matrix.use-custom-model }}
+        run: ./scripts/ci_runtests.sh
+
+      - name: Upload coverage to Codecov
+        if: success()
+        run: codecov
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          pipenv run flake8 .
-          # exit-zero treats all errors as warnings.
-          pipenv run flake8 . --exit-zero --select=C,E,F,W
+          python -m pip install --upgrade pip
+          pip install wheel
 
-      - name: Test with pytest
-        run: pipenv run pytest
+      - name: Build and publish to PyPI
+        env:
+          PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          python setup.py sdist bdist_wheel
+          twine upload dist/* -u $PYPI_USERNAME -p $PYPI_PASSWORD
