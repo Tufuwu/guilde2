@@ -1,73 +1,168 @@
-# python-georss-ingv-centro-nazionale-terremoti-client
+Census Geocode
+--------------
 
-[![Build Status](https://github.com/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/workflows/CI/badge.svg?branch=master)](https://github.com/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/actions?workflow=CI)
-[![codecov](https://codecov.io/gh/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/branch/master/graph/badge.svg?token=PHASSFXFVU)](https://codecov.io/gh/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client)
-[![PyPi](https://img.shields.io/pypi/v/georss-ingv-centro-nazionale-terremoti-client.svg)](https://pypi.python.org/pypi/georss-ingv-centro-nazionale-terremoti-client)
-[![Version](https://img.shields.io/pypi/pyversions/georss-ingv-centro-nazionale-terremoti-client.svg)](https://pypi.python.org/pypi/georss-ingv-centro-nazionale-terremoti-client)
+Census Geocode is a light weight Python wrapper for the US Census [Geocoder API](http://geocoding.geo.census.gov/geocoder/), compatible with  Python 3. It comes packaged with a simple command line tool for geocoding an address to a longitude and latitude, or a batch file into a parsed address and coordinates.
 
-This library provides convenient access to the [INGV Centro Nazionale Terremoti (Earthquakes) Feed](http://cnt.rm.ingv.it/).
+It's strongly recommended to review the [Census Geocoder docs](https://www.census.gov/programs-surveys/geography/technical-documentation/complete-technical-documentation/census-geocoder.html) before using this module.
 
-## Installation
-`pip install georss-ingv-centro-nazionale-terremoti-client`
+Basic example:
 
-## Usage
-See below for an example of how this library can be used. After instantiating 
-the feed class and supplying the required parameters, you can call `update` to 
-retrieve the feed data. The return value will be a tuple of a status code and 
-the actual data in the form of a list of specific feed entries.
-
-**Status Codes**
-* _UPDATE_OK_: Update went fine and data was retrieved. The library may still return empty data, for example because no entries fulfilled the filter criteria.
-* _UPDATE_OK_NO_DATA_: Update went fine but no data was retrieved, for example because the server indicated that there was not update since the last request.
-* _UPDATE_ERROR_: Something went wrong during the update
-
-**Supported Filters**
-
-| Filter            |                            | Description |
-|-------------------|----------------------------|-------------|
-| Radius            | `filter_radius`            | Radius in kilometers around the home coordinates in which events from feed are included. |
-| Minimum Magnitude | `filter_minimum_magnitude` | Minimum magnitude as float value. Only events with a magnitude equal or above this value are included. |
-
-**Example**
 ```python
-from georss_ingv_centro_nazionale_terremoti_client import \
-    IngvCentroNazionaleTerremotiFeed
-# Home Coordinates: Latitude: 40.84, Longitude: 14.25
-# Filter radius: 200 km
-# Filter minimum magnitude: 4.0
-feed = IngvCentroNazionaleTerremotiFeed((40.84, 14.25), 
-                                        filter_radius=200, 
-                                        filter_minimum_magnitude=4.0)
-status, entries = feed.update()
+import censusgeocode as cg
+
+cg.coordinates(x=-76, y=41)
+cg.onelineaddress('1600 Pennsylvania Avenue, Washington, DC')
+cg.address('1600 Pennsylvania Avenue', city='Washington', state='DC', zip='20006')
+cg.addressbatch('data/addresses.csv')
 ```
 
-## Feed Manager
+Use the returntype keyword to specify 'locations' or 'geographies'. 'Locations' yields structured information about the address, and 'geographies' yields information about the Census geographies. Geographies is the default.
+```python
+cg.onelineaddress('1600 Pennsylvania Avenue, Washington, DC', returntype='locations')
+```
 
-The Feed Manager helps managing feed updates over time, by notifying the 
-consumer of the feed about new feed entries, updates and removed entries 
-compared to the last feed update.
+Queries return a CensusResult object, which is basically a Python list with an extra 'input' property, which the Census returns to tell you how they interpreted your request.
 
-* If the current feed update is the first one, then all feed entries will be 
-  reported as new. The feed manager will keep track of all feed entries' 
-  external IDs that it has successfully processed.
-* If the current feed update is not the first one, then the feed manager will 
-  produce three sets:
-  * Feed entries that were not in the previous feed update but are in the 
-    current feed update will be reported as new.
-  * Feed entries that were in the previous feed update and are still in the 
-    current feed update will be reported as to be updated.
-  * Feed entries that were in the previous feed update but are not in the 
-    current feed update will be reported to be removed.
-* If the current update fails, then all feed entries processed in the previous
-  feed update will be reported to be removed.
+```python
+>>> result = cg.coordinates(x=-76, y=41)
+>>> result.input
+{
+    u'vintage': {
+        u'vintageName': u'Current_Current',
+        u'id': u'4',
+        u'vintageDescription': u'Current Vintage - Current Benchmark',
+        u'isDefault': True
+    },
+    u'benchmark': {
+        u'benchmarkName': u'Public_AR_Current',
+        u'id': u'4',
+        u'isDefault': False,
+        u'benchmarkDescription': u'Public Address Ranges - Current Benchmark'
+    },
+    u'location': {
+        u'y': 41.0,
+        u'x': -76.0
+    }
+}
+>>> result
+[{
+    '2010 Census Blocks': [{
+        'AREALAND': 1409023,
+        'AREAWATER': 0,
+        'BASENAME': '1045',
+        'BLKGRP': '1',
+        'BLOCK': '1045',
+        'CENTLAT': '+40.9957436',
+        'CENTLON': '-076.0089338',
+        'COUNTY': '079',
+        'FUNCSTAT': 'S',
+        'GEOID': '420792166001045',
+        'INTPTLAT': '+40.9957436',
+        'INTPTLON': '-076.0089338',
+        'LSADC': 'BK',
+        'LWBLKTYP': 'L',
+        'MTFCC': 'G5040',
+        'NAME': 'Block 1045',
+        'OBJECTID': 9940449,
+        'OID': 210404020212114,
+        'STATE': '42',
+        'SUFFIX': '',
+        'TRACT': '216600'
+    }],
+    'Census Tracts': [{
+        # snip 
+        'NAME': 'Census Tract 2166',
+        'OBJECTID': 61245,
+        'OID': 20790277158250,
+        'STATE': '42',
+        'TRACT': '216600'
+    }],
+    'Counties': [{
+        # snip
+        'NAME': 'Luzerne County',
+        'OBJECTID': 866,
+        'OID': 27590277115518,
+        'STATE': '42'
+    }],
+    'States': [{
+        # snip
+        'NAME': 'Pennsylvania',
+        'REGION': '1',
+        'STATE': '42',
+        'STATENS': '01779798',
+        'STUSAB': 'PA'
+    }]
+}]
+```
 
-After a successful update from the feed, the feed manager will provide two
-different dates:
+### Advanced
 
-* `last_update` will be the timestamp of the last successful update from the
-  feed. This date may be useful if the consumer of this library wants to
-  treat intermittent errors from feed updates differently.
-* `last_timestamp` will be the latest timestamp extracted from the feed data. 
-  This requires that the underlying feed data actually contains a suitable 
-  date. This date may be useful if the consumer of this library wants to 
-  process feed entries differently if they haven't actually been updated.
+By default, the geocoder uses the "Current" vintage and benchmarks. To use another vintage or benchmark, use the `CensusGeocode` class:
+````python
+from censusgeocode import CensusGeocode
+cg = CensusGeocode(benchmark='Public_AR_Current', vintage='Census2020_Current')
+cg.onelineaddress(foobar)
+````
+
+The Census may update the available benchmarks and vintages. Review the Census Geocoder docs for the currently available [benchmarks](https://geocoding.geo.census.gov/geocoder/benchmarks) and [vintages](https://geocoding.geo.census.gov/geocoder/vintages?form).
+
+## Command line tool
+
+The `censusgeocode` tool has two settings.
+
+At the simplest, it takes one argument, an address, and returns a comma-delimited longitude, latitude pair.
+````bash
+censusgeocode '100 Fifth Avenue, New York, NY'
+-73.992195,40.73797
+
+censusgeocode '1600 Pennsylvania Avenue, Washington DC'
+-77.03535,38.898754
+````
+
+The Census geocoder is reasonably good at recognizing non-standard addresses.
+````bash
+censusgeocode 'Hollywood & Vine, LA, CA'
+-118.32668,34.101624
+````
+
+It can also use the Census Geocoder's batch function to process an entire file. The file must be comma-delimited, have no header, and include the following columns:
+````
+unique id, street address, state, city, zip code
+````
+
+The geocoder can read from a file:
+````
+censusgeocode --csv tests/fixtures/batch.csv
+````
+([example file](https://github.com/fitnr/censusgeocode/blob/master/tests/fixtures/batch.csv))
+
+Or from stdin, using `-` as the filename:
+````
+head tests/fixtures/batch.csv | censusgeocode --csv -
+````
+
+According to the Census docs, the batch geocoder is limited to 10,000 rows.
+
+The output will be a CSV file (with a header) and the columns:
+* id
+* address
+* match
+* matchtype
+* parsed
+* tigerlineid
+* side
+* lat
+* lon
+
+If your data doesn't have a unique id, try adding line numbers with the Unix command line utility `nl`:
+```
+nl -s , input.csv | censusgeocode --csv - > output.csv
+```
+
+## License
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  If not, see http://www.gnu.org/licenses/.
