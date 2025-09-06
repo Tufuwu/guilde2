@@ -9,37 +9,38 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Set up Perl
-        uses: shogo82148/actions-setup-perl@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
-          perl-version: '5.32'
+          python-version: ${{ matrix.python-version }}
 
-      - name: Ensure script permissions
-        run: chmod +x scripts/link-format-chk.sh scripts/buildtable.pl
-
-      - name: Run link format check
-        run: scripts/link-format-chk.sh
-
-      - name: Build table
+      - name: Install dependencies
         run: |
-          scripts/buildtable.pl >/tmp/table.mediawiki || exit 1
-          diff README.mediawiki /tmp/table.mediawiki | grep '^[<>] |' >/tmp/after.diff || true
+          echo "Django<4.0" >> dev-requirements.txt
+          pip install -r dev-requirements.txt
 
-      - name: Compare with previous commit
-        run: |
-          if git checkout HEAD^ && scripts/buildtable.pl >/tmp/table.mediawiki 2>/dev/null; then
-            diff README.mediawiki /tmp/table.mediawiki | grep '^[<>] |' >/tmp/before.diff || true
-            newdiff=$(diff -s /tmp/before.diff /tmp/after.diff -u | grep '^+')
-            if [ -n "$newdiff" ]; then
-              echo "$newdiff"
-              exit 1
-            fi
-          else
-            echo 'Cannot build previous commit table for comparison'
-          fi
+      - name: Run flake8
+        run: flake8 sendgrid_backend/
+
+      - name: Check import order with isort
+        run: isort -c ./
+
+      - name: Check code style with black
+        run: black --check ./
+
+      - name: Type check with mypy
+        run: mypy sendgrid_backend/
+
+      - name: Run tests with tox
+        env:
+          TOXENV: py38
+        run: tox
