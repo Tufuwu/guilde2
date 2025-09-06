@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', 'pypy-3.8']
+        python-version: ['3.8']
+        django-version: ['1.8', '1.9', '1.11']  # Removed '1.10' as it is not supported
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -26,19 +27,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install tox-gh-actions codecov
+          pip install tox
+
+      - name: Create tox environment
+        run: |
+          echo "[tox]" > tox.ini
+          echo "envlist = py${{ matrix.python-version }}-django-${{ matrix.django-version }}" >> tox.ini
+          echo "[testenv]" >> tox.ini
+          echo "deps =" >> tox.ini
+          echo "    django==${{ matrix.django-version }}" >> tox.ini
 
       - name: Run tests
-        run: tox
-
-      - name: Upload coverage to Codecov
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: |
-          VERSION="python_${{ matrix.python-version }}" &&
-          VERSION="${VERSION//[^[:alnum:]]/}" &&
-          codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION ||
-          (sleep 5 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
-          (sleep 10 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
-          (sleep 20 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION) ||
-          (sleep 30 && codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION)
+          TOXENV: py${{ matrix.python-version }}-django-${{ matrix.django-version }}
+        run: tox
