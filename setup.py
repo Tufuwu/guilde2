@@ -1,60 +1,111 @@
-#!/usr/bin/env python3
-
+#!/usr/bin/env python
+"""Defines the setup instructions for domaintools"""
+import glob
+import os
+import subprocess
 import sys
-from os import R_OK, access, makedirs, path
-from urllib.error import URLError
-from urllib.request import urlretrieve
+from os import path
 
-from setuptools import setup
+from setuptools import Extension, find_packages, setup
+from setuptools.command.test import test as TestCommand
 
-if not sys.version_info[0] == 3:
-    sys.exit("Python 2.x is not supported; Python 3.x is required.")
+requires = ['requests']
+packages = ['domaintools']
 
-########################################
+major, minor, patch = sys.version_info[:3]
 
-version_py = path.join(path.dirname(__file__), 'zxing', 'version.py')
+if major >= 3:
+    if minor == 5 and patch >= 3:
+        packages.append('domaintools_async')
+        requires.append('aiohttp==3.4.4')
+    if minor > 5:
+        packages.append('domaintools_async')
+        requires.append('aiohttp>=3.6.0,<4.0.0')
+elif major == 2 and minor <= 6:
+    requires.extend(['ordereddict', 'argparse'])
 
-d = {}
-with open(version_py, 'r') as fh:
-    exec(fh.read(), d)
-    version_pep = d['__version__']
+MYDIR = path.abspath(os.path.dirname(__file__))
+JYTHON = 'java' in sys.platform
+PYPY = bool(getattr(sys, 'pypy_version_info', False))
+CYTHON = False
+if not PYPY and not JYTHON:
+    try:
+        from Cython.Distutils import build_ext
+        CYTHON = True
+    except ImportError:
+        pass
 
-########################################
+cmdclass = {}
+ext_modules = []
+if CYTHON:
+    def list_modules(dirname):
+        filenames = glob.glob(path.join(dirname, '*.py'))
+
+        module_names = []
+        for name in filenames:
+            module, ext = path.splitext(path.basename(name))
+            if module != '__init__':
+                module_names.append(module)
+
+        return module_names
+
+    ext_modules = [
+        Extension('domaintools.' + ext, [path.join('domaintools', ext + '.py')])
+        for ext in list_modules(path.join(MYDIR, 'domaintools'))]
+    cmdclass['build_ext'] = build_ext
 
 
-def download_java_files(force=False):
-    files = {'java/javase.jar': 'https://repo1.maven.org/maven2/com/google/zxing/javase/3.4.1/javase-3.4.1.jar',
-             'java/core.jar': 'https://repo1.maven.org/maven2/com/google/zxing/core/3.4.1/core-3.4.1.jar',
-             'java/jcommander.jar': 'https://repo1.maven.org/maven2/com/beust/jcommander/1.78/jcommander-1.78.jar'}
+class PyTest(TestCommand):
+    extra_kwargs = {'tests_require': ['pytest', 'mock']}
 
-    for fn, url in files.items():
-        p = path.join(path.dirname(__file__), 'zxing', fn)
-        d = path.dirname(p)
-        if not force and access(p, R_OK):
-            print("Already have %s." % p)
-        else:
-            print("Downloading %s from %s ..." % (p, url))
-            try:
-                makedirs(d, exist_ok=True)
-                urlretrieve(url, p)
-            except (OSError, URLError) as e:
-                raise
-    return list(files.keys())
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        sys.exit(pytest.main(self.test_args))
 
 
-setup(
-    name='zxing',
-    version=version_pep,
-    description="wrapper for zebra crossing (zxing) barcode library",
-    long_description="More information: https://github.com/dlenski/python-zxing",
-    url="https://github.com/dlenski/python-zxing",
-    author='Daniel Lenski',
-    author_email='dlenski@gmail.com',
-    packages=['zxing'],
-    package_data={'zxing': download_java_files()},
-    entry_points={'console_scripts': ['zxing=zxing.__main__:main']},
-    install_requires=open('requirements.txt').readlines(),
-    tests_require=open('requirements-test.txt').readlines(),
-    test_suite='nose.collector',
-    license='LGPL v3 or later',
-)
+cmdclass['test'] = PyTest
+
+try:
+   with open("README.md", "r") as f:
+       readme = f.read()
+except (IOError, ImportError, OSError, RuntimeError):
+   readme = ''
+
+setup(name='domaintools_api',
+      version='0.5.1',
+      description="DomainTools' Official Python API",
+      long_description=readme,
+      long_description_content_type="text/markdown",
+      author='DomainTools',
+      author_email='timothy@domaintools.com',
+      url='https://github.com/domaintools/python_api',
+      license="MIT",
+      entry_points={
+        'console_scripts': [
+            'domaintools = domaintools.cli:run',
+        ]
+      },
+      packages=packages,
+      install_requires=requires,
+      cmdclass=cmdclass,
+      ext_modules=ext_modules,
+      keywords='Python, Python3',
+      classifiers=['Development Status :: 6 - Mature',
+                   'Intended Audience :: Developers',
+                   'Natural Language :: English',
+                   'Environment :: Console',
+                   'License :: OSI Approved :: MIT License',
+                   'Programming Language :: Python',
+                   'Programming Language :: Python :: 2.7',
+                   'Programming Language :: Python :: 3.5',
+                   'Programming Language :: Python :: 3.6',
+                   'Programming Language :: Python :: 3.7',
+                   'Programming Language :: Python :: 3.8',
+                   'Topic :: Software Development :: Libraries',
+                   'Topic :: Utilities'],
+      **PyTest.extra_kwargs)
