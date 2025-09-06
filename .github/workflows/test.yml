@@ -1,4 +1,4 @@
-name: Python CI
+name: CI
 
 on:
   push:
@@ -9,58 +9,34 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.8"]
+    services:
+      docker:
+        image: docker:stable
+        options: --privileged
+
     steps:
-      - name: Check out the repository
+      - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.9'
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - name: Install Docker
+        run: |
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 
-      - name: Install dependencies
-        run: pip install --editable .[dev]
+      - name: Build Docker image
+        run: docker build -t draft-kings-fun .
 
-      - name: Install test dependencies
-        run: pip install pytest pytest-cov
+      - name: Run Flake8
+        run: docker run draft-kings-fun sh -c "pip install flake8 && flake8 draftfast"
 
-      - name: Run tests
-        run: make check-tests
-
-  additional-checks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: "3.8"
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install additional dependencies
-        run: pip install black mypy
-
-      - name: Run additional checks
-        run: make check-lint
+      - name: Run Tests
+        run: docker run draft-kings-fun sh -c "pip install nose && nosetests --with-coverage --cover-package=."
